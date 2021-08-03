@@ -1,0 +1,49 @@
+service: service-name
+useDotenv: true
+
+plugins:
+  - serverless-webpack
+  - serverless-plugin-warmup
+  - serverless-offline
+
+custom:
+  webpack:
+    webpackConfig: webpack.config.js
+    packager: "yarn"
+    includeModules: true # This is required
+    packagerOptions:
+      scripts: # this is the magic
+        - prisma generate
+
+  serverless-offline:
+    httpPort: 9999
+  warmup:
+    - production
+    - staging
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  region: us-west-1
+
+functions:
+  main:
+    handler: src/lambda.handler
+    events:
+      - http:
+          method: any
+          path: /{proxy+}
+          cors:
+            origins:
+              - https://grida.co
+              - https://www.grida.co
+            allowCredentials: true
+      - http:
+          method: GET
+          path: /
+
+# only include the Prisma binary required on AWS Lambda while packaging
+package:
+  patterns:
+    - "!node_modules/.prisma/client/query-engine-*"
+    - "node_modules/.prisma/client/query-engine-rhel-*"
